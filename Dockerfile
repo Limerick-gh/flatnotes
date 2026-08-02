@@ -22,7 +22,7 @@ COPY client ./client
 RUN npm run build
 
 # Runtime Container
-FROM python:3.13-slim-bullseye
+FROM python:3.13-slim-trixie
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ARG BUILD_DIR
