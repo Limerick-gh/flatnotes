@@ -1,3 +1,28 @@
+[project]
+name = "flatnotes"
+version = "5.5.4"
+description = "A database-less note taking web app that utilises a flat folder of markdown files for storage."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "whoosh==2.7.4",
+    "fastapi==0.118.3",
+    "uvicorn[standard]==0.37.0",
+    "aiofiles==25.1.0",
+    "python-jose[cryptography]==3.5.0",
+    "pyotp==2.9.0",
+    "qrcode==8.2",
+    "python-multipart==0.0.20",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "flake8",
+    "rope",
+    "isort",
+]
+
 [tool.isort]
 profile = "black"
 line_length = 79

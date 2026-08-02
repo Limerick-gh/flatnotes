@@ -23,6 +23,7 @@ RUN npm run build
 
 # Runtime Container
 FROM python:3.11-slim-bullseye
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ARG BUILD_DIR
 
@@ -43,13 +44,13 @@ RUN apt update && apt install -y \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir pipenv
-
 WORKDIR ${APP_PATH}
 
-COPY LICENSE Pipfile Pipfile.lock ./
-RUN pipenv install --deploy --ignore-pipfile --system && \
-    pipenv --clear
+COPY LICENSE pyproject.toml .python-version uv.lock ./
+
+ENV UV_NO_MANAGED_PYTHON=1
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
+RUN uv sync --locked --compile-bytecode --no-dev
 
 COPY server ./server
 COPY --from=build --chmod=777 ${BUILD_DIR}/client/dist ./client/dist
