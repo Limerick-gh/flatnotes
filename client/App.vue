@@ -12,7 +12,33 @@
       :hide-logo="!showNavBarLogo"
       @toggleSearchModal="toggleSearchModal"
     />
-    <RouterView />
+    <div v-if="showNavBar" class="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-8">
+      <aside
+        class="max-h-48 shrink-0 overflow-y-auto border-b border-theme-border py-3 lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r lg:py-4 lg:pr-4"
+      >
+        <h2
+          class="mb-2 px-3 text-sm font-bold uppercase text-theme-text-very-muted"
+        >
+          Tags
+        </h2>
+        <LoadingIndicator ref="tagsLoadingIndicator">
+          <nav class="flex flex-wrap gap-1">
+            <RouterLink
+              v-for="tag in tags"
+              :key="tag"
+              :to="{ name: 'search', query: { term: `#${tag}` } }"
+              class="rounded px-3 py-2 text-base text-theme-text-muted hover:bg-theme-background-elevated hover:text-theme-text"
+            >
+              #{{ tag }}
+            </RouterLink>
+          </nav>
+        </LoadingIndicator>
+      </aside>
+      <main class="min-h-0 min-w-0 flex-1">
+        <RouterView />
+      </main>
+    </div>
+    <RouterView v-else />
   </LoadingIndicator>
 </template>
 
@@ -20,10 +46,10 @@
 import Mousetrap from "mousetrap";
 import "mousetrap/plugins/global-bind/mousetrap-global-bind";
 import { useToast } from "primevue/usetoast";
-import { computed, ref } from "vue";
-import { RouterView, useRoute } from "vue-router";
+import { computed, onMounted, ref, watch } from "vue";
+import { RouterLink, RouterView, useRoute } from "vue-router";
 
-import { apiErrorHandler, getConfig } from "./api.js";
+import { apiErrorHandler, getConfig, getTags } from "./api.js";
 import PrimeToast from "./components/PrimeToast.vue";
 import { useGlobalStore } from "./globalStore.js";
 import { loadTheme } from "./helpers.js";
@@ -35,6 +61,8 @@ import router from "./router.js";
 const globalStore = useGlobalStore();
 const isSearchModalVisible = ref(false);
 const loadingIndicator = ref();
+const tags = ref([]);
+const tagsLoadingIndicator = ref();
 const navBar = ref();
 const route = useRoute();
 const toast = useToast();
@@ -84,6 +112,30 @@ const showNavBarLogo = computed(() => {
 function toggleSearchModal() {
   isSearchModalVisible.value = !isSearchModalVisible.value;
 }
+
+function initTags() {
+  getTags()
+    .then((data) => {
+      tags.value = data;
+      tagsLoadingIndicator.value.setLoaded();
+    })
+    .catch((error) => {
+      tagsLoadingIndicator.value.setFailed();
+      apiErrorHandler(error, toast);
+    });
+}
+
+watch(showNavBar, (isVisible) => {
+  if (isVisible && tags.value.length === 0) {
+    initTags();
+  }
+});
+
+onMounted(() => {
+  if (showNavBar.value) {
+    initTags();
+  }
+});
 
 loadTheme();
 </script>
