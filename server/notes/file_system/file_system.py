@@ -294,6 +294,15 @@ class FileSystemNotes(BaseNotes):
             lambda tag: "tags:" + tag.group(0)[1:],
             term,
         )
+        term = re.sub(
+            r"(?<![\w*])([A-Za-z0-9_-]+)(?![\w*:])",
+            lambda word: (
+                word.group(0)
+                if word.group(0).upper() in {"AND", "OR", "NOT"}
+                else f"*{word.group(0)}*"
+            ),
+            term,
+        )
         return term
 
     @staticmethod
