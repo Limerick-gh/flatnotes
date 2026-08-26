@@ -41,10 +41,12 @@ class IndexSchema(SchemaClass):
 
 
 class FileSystemNotes(BaseNotes):
-    TAGS_RE = re.compile(r"(?:(?<=^#)|(?<=\s#))[a-zA-Z0-9_-]+(?=\s|$)")
+    TAGS_RE = re.compile(
+        r"(?:(?<=^#)|(?<=\s#))[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*(?=\s|$)"
+    )
     CODEBLOCK_RE = re.compile(r"`{1,3}.*?`{1,3}", re.DOTALL)
     TAGS_WITH_HASH_RE = re.compile(
-        r"(?:(?<=^)|(?<=\s))#[a-zA-Z0-9_-]+(?=\s|$)"
+        r"(?:(?<=^)|(?<=\s))#[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*(?=\s|$)"
     )
 
     def __init__(self):
@@ -295,7 +297,7 @@ class FileSystemNotes(BaseNotes):
             term,
         )
         term = re.sub(
-            r"(?<![\w*])([A-Za-z0-9_-]+)(?![\w*:])",
+            r"(?<![\w*])([A-Za-z0-9_/-]+)(?![\w*:])",
             lambda word: (
                 word.group(0)
                 if word.group(0).upper() in {"AND", "OR", "NOT"}
