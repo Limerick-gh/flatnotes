@@ -297,12 +297,16 @@ class FileSystemNotes(BaseNotes):
             term,
         )
         term = re.sub(
-            r"(?<![\w*])(?:(title|content|tags):)?([A-Za-z0-9_/-]+)(?![\w*:])",
+            r"\b(title|content|tags):([A-Za-z0-9_/-]+)",
+            lambda field: f"{field.group(1)}:*{field.group(2)}*",
+            term,
+        )
+        term = re.sub(
+            r"(?<![\w*:])([A-Za-z0-9_/-]+)(?![\w*:])",
             lambda word: (
                 word.group(0)
-                if (word.group(2) or word.group(1)).upper()
-                in {"AND", "OR", "NOT"}
-                else f"{word.group(1) or ''}*{word.group(2)}*"
+                if word.group(0).upper() in {"AND", "OR", "NOT"}
+                else f"*{word.group(0)}*"
             ),
             term,
         )
