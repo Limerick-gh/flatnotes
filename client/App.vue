@@ -12,7 +12,10 @@
       :hide-logo="!showNavBarLogo"
       @toggleSearchModal="toggleSearchModal"
     />
-    <div v-if="showNavBar" class="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-8">
+    <div
+      v-if="showNavBar"
+      class="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-8"
+    >
       <aside
         class="max-h-48 shrink-0 overflow-y-auto border-b border-theme-border py-3 lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r lg:py-4 lg:pr-4"
       >
@@ -22,16 +25,7 @@
           Tags
         </h2>
         <LoadingIndicator ref="tagsLoadingIndicator">
-          <nav class="flex flex-wrap gap-1">
-            <RouterLink
-              v-for="tag in tags"
-              :key="tag"
-              :to="{ name: 'search', query: { term: `#${tag}` } }"
-              class="rounded px-3 py-2 text-base text-theme-text-muted hover:bg-theme-background-elevated hover:text-theme-text"
-            >
-              #{{ tag }}
-            </RouterLink>
-          </nav>
+          <TagTree :nodes="tagTree" />
         </LoadingIndicator>
       </aside>
       <main class="min-h-0 min-w-0 flex-1">
@@ -47,10 +41,11 @@ import Mousetrap from "mousetrap";
 import "mousetrap/plugins/global-bind/mousetrap-global-bind";
 import { useToast } from "primevue/usetoast";
 import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink, RouterView, useRoute } from "vue-router";
+import { RouterView, useRoute } from "vue-router";
 
 import { apiErrorHandler, getConfig, getTags } from "./api.js";
 import PrimeToast from "./components/PrimeToast.vue";
+import TagTree from "./components/TagTree.vue";
 import { useGlobalStore } from "./globalStore.js";
 import { loadTheme } from "./helpers.js";
 import NavBar from "./partials/NavBar.vue";
@@ -62,6 +57,7 @@ const globalStore = useGlobalStore();
 const isSearchModalVisible = ref(false);
 const loadingIndicator = ref();
 const tags = ref([]);
+const tagTree = ref([]);
 const tagsLoadingIndicator = ref();
 const navBar = ref();
 const route = useRoute();
@@ -125,11 +121,55 @@ function initTags() {
     });
 }
 
+function buildTagTree() {
+  const hierarchy = globalStore.config.tagHierarchy || {};
+  const allTags = new Set([
+    ...tags.value,
+    ...Object.keys(hierarchy),
+    ...Object.values(hierarchy).flat(),
+  ]);
+  const childTags = new Set(Object.values(hierarchy).flat());
+
+  function descendants(tag, ancestors = new Set()) {
+    if (ancestors.has(tag)) {
+      return [];
+    }
+    const nextAncestors = new Set(ancestors).add(tag);
+    return (hierarchy[tag] || []).flatMap((child) => [
+      child,
+      ...descendants(child, nextAncestors),
+    ]);
+  }
+
+  function createNode(tag) {
+    const children = (hierarchy[tag] || [])
+      .filter((child) => allTags.has(child))
+      .map(createNode);
+    const searchTags = [tag, ...descendants(tag)];
+    return {
+      tag,
+      children,
+      expanded: true,
+      searchTerm: searchTags.map((searchTag) => `#${searchTag}`).join(" OR "),
+    };
+  }
+
+  tagTree.value = [...allTags]
+    .filter((tag) => !childTags.has(tag))
+    .sort()
+    .map(createNode);
+}
+
 watch(showNavBar, (isVisible) => {
   if (isVisible && tags.value.length === 0) {
     initTags();
   }
 });
+watch(
+  [tags, () => globalStore.config.tagHierarchy],
+  buildTagTree,
+  { deep: true },
+);
 
 onMounted(() => {
   if (showNavBar.value) {

@@ -38,6 +38,11 @@ const router = createRouter({
         sortBy: Number(route.query[constants.params.sortBy]) || undefined,
       }),
     },
+    {
+      path: "/tag-hierarchy",
+      name: "tagHierarchy",
+      component: () => import("./views/TagHierarchy.vue"),
+    },
   ],
 });
 

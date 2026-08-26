@@ -32,6 +32,7 @@ replace_base_href("client/dist/index.html", global_config.path_prefix)
 @router.get("/login", include_in_schema=False)
 @router.get("/search", include_in_schema=False)
 @router.get("/new", include_in_schema=False)
+@router.get("/tag-hierarchy", include_in_schema=False)
 @router.get("/note/{title}", include_in_schema=False)
 def root(title: str = ""):
     with open("client/dist/index.html", "r", encoding="utf-8") as f:
@@ -190,7 +191,27 @@ def get_config():
         quick_access_term=global_config.quick_access_term,
         quick_access_sort=global_config.quick_access_sort,
         quick_access_limit=global_config.quick_access_limit,
+        tag_hierarchy=global_config.tag_hierarchy,
     )
+
+
+@router.put(
+    "/api/tag-hierarchy",
+    dependencies=auth_deps,
+    response_model=dict[str, list[str]],
+)
+def update_tag_hierarchy(hierarchy: dict[str, list[str]]):
+    """Save the tag hierarchy configured through the web interface."""
+    if global_config.auth_type == AuthType.READ_ONLY:
+        raise HTTPException(status_code=403, detail="Read-only access.")
+    try:
+        global_config.save_tag_hierarchy(hierarchy)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Tag hierarchy must be a valid acyclic parent-child mapping.",
+        )
+    return global_config.tag_hierarchy
 
 
 # endregion

@@ -140,6 +140,15 @@ export async function getTags() {
   }
 }
 
+export async function updateTagHierarchy(hierarchy) {
+  try {
+    const response = await api.put("api/tag-hierarchy", hierarchy);
+    return response.data;
+  } catch (response) {
+    return Promise.reject(response);
+  }
+}
+
 export async function createAttachment(file) {
   try {
     const formData = new FormData();

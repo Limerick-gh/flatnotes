@@ -1,3 +1,5 @@
+import json
+import os
 import sys
 from enum import Enum
 
@@ -14,6 +16,7 @@ class GlobalConfig:
         self.quick_access_term: str = self._quick_access_term()
         self.quick_access_sort: str = self._quick_access_sort()
         self.quick_access_limit: int = self._quick_access_limit()
+        self.tag_hierarchy: dict[str, list[str]] = self._tag_hierarchy()
         self.path_prefix: str = self._load_path_prefix()
 
     def load_auth(self):
@@ -90,6 +93,72 @@ class GlobalConfig:
         key = "FLATNOTES_QUICK_ACCESS_LIMIT"
         return get_env(key, mandatory=False, default=4, cast_int=True)
 
+    def _tag_hierarchy(self):
+        key = "FLATNOTES_TAG_HIERARCHY"
+        value = get_env(key, mandatory=False, default="{}")
+        try:
+            hierarchy = json.loads(value)
+            if not isinstance(hierarchy, dict) or any(
+                not isinstance(parent, str)
+                or not isinstance(children, list)
+                or not all(isinstance(child, str) for child in children)
+                for parent, children in hierarchy.items()
+            ):
+                raise ValueError
+            hierarchy = {
+                parent.lower(): [child.lower() for child in children]
+                for parent, children in hierarchy.items()
+            }
+            hierarchy_file = self._tag_hierarchy_file()
+            if os.path.isfile(hierarchy_file):
+                with open(hierarchy_file, "r", encoding="utf-8") as file:
+                    hierarchy = json.load(file)
+                self._validate_tag_hierarchy_format(hierarchy)
+            for parent in hierarchy:
+                self._validate_tag_hierarchy(hierarchy, parent, set())
+            return hierarchy
+        except (TypeError, json.JSONDecodeError, ValueError):
+            logger.error(
+                f"Invalid value '{value}' for {key}. Must be a JSON object "
+                + "mapping parent tags to child tag arrays."
+            )
+            sys.exit(1)
+
+    def save_tag_hierarchy(self, hierarchy):
+        self._validate_tag_hierarchy_format(hierarchy)
+        hierarchy = {
+            parent.lower(): [child.lower() for child in children]
+            for parent, children in hierarchy.items()
+        }
+        for parent in hierarchy:
+            self._validate_tag_hierarchy(hierarchy, parent, set())
+        with open(self._tag_hierarchy_file(), "w", encoding="utf-8") as file:
+            json.dump(hierarchy, file, indent=2)
+        self.tag_hierarchy = hierarchy
+
+    @staticmethod
+    def _validate_tag_hierarchy_format(hierarchy):
+        if not isinstance(hierarchy, dict) or any(
+            not isinstance(parent, str)
+            or not isinstance(children, list)
+            or not all(isinstance(child, str) for child in children)
+            for parent, children in hierarchy.items()
+        ):
+            raise ValueError
+
+    def _tag_hierarchy_file(self):
+        path = get_env("FLATNOTES_PATH", mandatory=True)
+        return os.path.join(path, ".flatnotes-tag-hierarchy.json")
+
+    @staticmethod
+    def _validate_tag_hierarchy(hierarchy, tag, ancestors):
+        if tag in ancestors:
+            raise ValueError
+        for child in hierarchy.get(tag, []):
+            GlobalConfig._validate_tag_hierarchy(
+                hierarchy, child, ancestors | {tag}
+            )
+
     def _load_path_prefix(self):
         key = "FLATNOTES_PATH_PREFIX"
         value = get_env(key, mandatory=False, default="")
@@ -116,3 +185,4 @@ class GlobalConfigResponseModel(CustomBaseModel):
     quick_access_term: str
     quick_access_sort: str
     quick_access_limit: int
+    tag_hierarchy: dict[str, list[str]]

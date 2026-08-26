@@ -101,6 +101,22 @@ services:
 
 See the [Environment Variables](https://github.com/dullage/flatnotes/wiki/Environment-Variables) article in the wiki for a full list of configuration options.
 
+### Hierarchical Tags
+
+Tags can be organized as a configurable tree from the **Manage Tags** item in
+the application menu. The initial hierarchy can optionally be provided with
+the `FLATNOTES_TAG_HIERARCHY` environment variable. Set it to a JSON object
+mapping each parent tag to its child tags:
+
+```yaml
+FLATNOTES_TAG_HIERARCHY: '{"work":["work/client","work/personal"],"work/client":["work/client/website"]}'
+```
+
+The web interface saves changes in the notes data directory. Configured
+parents and children are shown as an expandable tree in the sidebar. Selecting
+a parent searches that tag and all of its descendants. Tags not included in
+the configuration remain available as top-level tags.
+
 ## Roadmap
 
 I want to keep flatnotes as simple and distraction-free as possible which means limiting new features. This said, I welcome feedback and suggestions.

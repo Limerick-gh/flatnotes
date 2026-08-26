@@ -75,6 +75,12 @@ const menuItems = [
     command: toggleTheme,
   },
   {
+    label: "Manage Tags",
+    icon: mdilNoteMultiple,
+    command: () => router.push({ name: "tagHierarchy" }),
+    visible: () => globalStore.config.authType !== authTypes.readOnly,
+  },
+  {
     separator: true,
     visible: showLogOutButton,
   },
